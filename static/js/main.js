@@ -68,7 +68,10 @@
       if (!v) return "Укажите электронную почту";
       return EMAIL_RE.test(v) ? "" : "Укажите корректный e-mail";
     },
-    consent: function (v) { return v ? "" : "Необходимо согласие на обработку персональных данных"; }
+    consent: function (v) { return v ? "" : "Необходимо согласие на обработку персональных данных"; },
+    photo_consent: function (v) {
+      return v ? "" : "Необходимо согласие на проведение фото- и видеосъемки";
+    }
   };
 
   var REQUIRED = ["first_name", "last_name", "company", "position", "phone", "email"];
@@ -97,6 +100,13 @@
     }
   });
 
+  var photoConsentBox = input("photo_consent");
+  photoConsentBox.addEventListener("change", function () {
+    if (field("photo_consent").classList.contains("is-invalid") || photoConsentBox.checked) {
+      clearError("photo_consent");
+    }
+  });
+
   /* Prevent double submit */
   var submitting = false;
   function setSubmitting(on) {
@@ -118,9 +128,13 @@
       setError("consent", validators.consent(false));
       if (!firstInvalid) firstInvalid = "consent";
     }
+    if (!photoConsentBox.checked) {
+      setError("photo_consent", validators.photo_consent(false));
+      if (!firstInvalid) firstInvalid = "photo_consent";
+    }
 
     if (firstInvalid) {
-      var target = input(firstInvalid) || consentBox;
+      var target = input(firstInvalid) || consentBox || photoConsentBox;
       target.focus({ preventScroll: false });
       target.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -136,7 +150,8 @@
       phone: input("phone").value.trim(),
       email: input("email").value.trim(),
       comments: input("comments").value.trim(),
-      consent: consentBox.checked
+      consent: consentBox.checked,
+      photo_consent: photoConsentBox.checked
     };
 
     fetch("/api/register", {
@@ -160,7 +175,7 @@
             setError(name, result.data.errors[name]);
           });
           var first = Object.keys(result.data.errors)[0];
-          if (first) (input(first) || consentBox).focus();
+          if (first) (input(first) || consentBox || photoConsentBox).focus();
         } else if (result.data.error) {
           alert(result.data.error);
         }

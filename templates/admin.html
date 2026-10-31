@@ -51,7 +51,7 @@
     <thead>
       <tr>
         <th>#</th><th>Имя</th><th>Фамилия</th><th>Компания</th><th>Должность</th>
-        <th>Телефон</th><th>Email</th><th>Комментарий</th><th>Согласие</th><th>Дата</th>
+        <th>Телефон</th><th>Email</th><th>Комментарий</th><th>Согласие</th><th>Фото/видео</th><th>Дата</th>
       </tr>
     </thead>
     <tbody>
@@ -66,6 +66,7 @@
         <td>{{ r['email'] }}</td>
         <td>{{ r['comments'] }}</td>
         <td>{{ 'Да' if r['consent'] else 'Нет' }}</td>
+        <td>{{ 'Да' if r['photo_consent'] else 'Нет' }}</td>
         <td>{{ r['created_at'] }}</td>
       </tr>
       {% endfor %}

@@ -130,6 +130,11 @@ def privacy():
     return render_template("privacy.html")
 
 
+@app.get("/photo-consent")
+def photo_consent():
+    return render_template("photo-consent.html")
+
+
 # --------------------------------------------------------------------------- #
 # Registration API
 # --------------------------------------------------------------------------- #
@@ -149,6 +154,7 @@ def register():
     email = clean(payload.get("email")).lower()
     comments = clean(payload.get("comments"))
     consent = payload.get("consent") in (True, "true", "on", 1, "1")
+    photo_consent = payload.get("photo_consent") in (True, "true", "on", 1, "1")
 
     errors: dict[str, str] = {}
     if len(first_name) < 2:
@@ -165,6 +171,8 @@ def register():
         errors["email"] = "Укажите корректный адрес электронной почты."
     if not consent:
         errors["consent"] = "Необходимо согласие на обработку персональных данных."
+    if not photo_consent:
+        errors["photo_consent"] = "Необходимо согласие на проведение фото- и видеосъемки."
 
     if errors:
         return jsonify({"ok": False, "errors": errors}), 422
@@ -188,6 +196,7 @@ def register():
             "email": email,
             "comments": comments,
             "consent": consent,
+            "photo_consent": photo_consent,
         }
     )
     return jsonify(
@@ -217,6 +226,7 @@ def api_registrations():
                     "email": r["email"],
                     "comments": r["comments"],
                     "consent": bool(r["consent"]),
+                    "photo_consent": bool(r["photo_consent"]),
                     "created_at": r["created_at"],
                 }
                 for r in rows
@@ -243,13 +253,15 @@ def export_csv():
     writer = csv.writer(buffer)
     writer.writerow(
         ["ID", "Имя", "Фамилия", "Компания", "Должность",
-         "Телефон", "Email", "Комментарий", "Согласие", "Дата регистрации"]
+         "Телефон", "Email", "Комментарий", "Согласие", "Фото/видео", "Дата регистрации"]
     )
     for r in rows:
         writer.writerow(
             [r["id"], r["first_name"], r["last_name"], r["company"],
              r["position"], r["phone"], r["email"], r["comments"],
-             "Да" if r["consent"] else "Нет", r["created_at"]]
+             "Да" if r["consent"] else "Нет",
+             "Да" if r["photo_consent"] else "Нет",
+             r["created_at"]]
         )
     buffer.seek(0)
     return Response(
@@ -268,7 +280,7 @@ def export_xlsx():
     ws.title = "Гости"
 
     headers = ["ID", "Имя", "Фамилия", "Компания", "Должность",
-               "Телефон", "Email", "Комментарий", "Согласие", "Дата регистрации"]
+               "Телефон", "Email", "Комментарий", "Согласие", "Фото/видео", "Дата регистрации"]
     header_fill = PatternFill("solid", fgColor="E4D7C1")
     header_font = Font(bold=True, color="000000")
     ws.append(headers)
@@ -281,10 +293,12 @@ def export_xlsx():
         ws.append(
             [r["id"], r["first_name"], r["last_name"], r["company"],
              r["position"], r["phone"], r["email"], r["comments"],
-             "Да" if r["consent"] else "Нет", r["created_at"]]
+             "Да" if r["consent"] else "Нет",
+             "Да" if r["photo_consent"] else "Нет",
+             r["created_at"]]
         )
 
-    widths = [6, 16, 18, 22, 22, 18, 26, 30, 10, 24]
+    widths = [6, 16, 18, 22, 22, 18, 26, 30, 10, 12, 24]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[chr(64 + i)].width = w
     ws.freeze_panes = "A2"

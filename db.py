@@ -23,16 +23,17 @@ DB_PATH = os.environ.get("EVENT_DB_PATH", str(DATA_DIR / "registrations.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS registrations (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    first_name   TEXT NOT NULL,
-    last_name    TEXT NOT NULL,
-    company      TEXT NOT NULL,
-    position     TEXT NOT NULL,
-    phone        TEXT NOT NULL,
-    email        TEXT NOT NULL,
-    comments     TEXT NOT NULL DEFAULT '',
-    consent      INTEGER NOT NULL CHECK (consent IN (0, 1)),
-    created_at   TEXT NOT NULL
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name    TEXT NOT NULL,
+    last_name     TEXT NOT NULL,
+    company       TEXT NOT NULL,
+    position      TEXT NOT NULL,
+    phone         TEXT NOT NULL,
+    email         TEXT NOT NULL,
+    comments      TEXT NOT NULL DEFAULT '',
+    consent       INTEGER NOT NULL CHECK (consent IN (0, 1)),
+    photo_consent INTEGER NOT NULL DEFAULT 0 CHECK (photo_consent IN (0, 1)),
+    created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations (email);
 """
@@ -48,6 +49,17 @@ def get_connection() -> sqlite3.Connection:
 def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+        # Migrate pre-existing databases that lack the photo_consent column.
+        cols = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(registrations)").fetchall()
+        }
+        if "photo_consent" not in cols:
+            conn.execute(
+                "ALTER TABLE registrations "
+                "ADD COLUMN photo_consent INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (photo_consent IN (0, 1))"
+            )
 
 
 def insert_registration(data: dict) -> int:
@@ -57,8 +69,8 @@ def insert_registration(data: dict) -> int:
             """
             INSERT INTO registrations
                 (first_name, last_name, company, position, phone, email,
-                 comments, consent, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 comments, consent, photo_consent, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 data["first_name"],
@@ -69,6 +81,7 @@ def insert_registration(data: dict) -> int:
                 data["email"],
                 data.get("comments", ""),
                 1 if data.get("consent") else 0,
+                1 if data.get("photo_consent") else 0,
                 now,
             ),
         )
